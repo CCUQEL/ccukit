@@ -1,4 +1,4 @@
-"""Write some of the common fitting formulaes that we will use.
+"""Some of the common fitting formulaes that we use frequently.
 
 """
 import numpy as np

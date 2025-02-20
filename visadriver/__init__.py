@@ -1,14 +1,13 @@
-"""The driver to control visa instruments.
+"""The drivers to control visa instruments.
 
-Importing example:
+All of the python files have only one class written in it.
+And those classes are imported when `import ccukit.visadriver`.
+
+User importing example:
 >>> from ccukit.visadriver import YOKOGAWA
 
-Python file in this folder should be wrote to have one class only and it is with the same name as filename.
-And those classes should be automatically imported when using `import ccukit.labberreader`. Developer should write
+Developer should write (in this __init__.py):
 >>> from .filename import ClassName
-where FileName is the same as ClassName and the capitcal letter convention is applyed on the class definition.
-
-
 """
 
 from .yokogawa import YOKOGAWA

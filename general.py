@@ -1,4 +1,10 @@
 """General tools in `general.py  will be imported when `import ccukit`.
+
+functions:
+-- get_path: Pop up a dialog to browse a file path then return it.
+-- plot_trace: Plot the trace of Im vs Re, Mag vs Freq, and Phase vs Freq.
+
+Developer should add new function/class/object name in the `__all__` list.
 """
 
 from tkinter import Tk, filedialog

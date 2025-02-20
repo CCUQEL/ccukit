@@ -12,7 +12,7 @@ __all__ = [
 ]
 
 class VNAxDC:
-    """A namespace for functions for VNA with a DC sweep experimental setup
+    """An object to read expeiment data stored by labber, for VNA with a DC sweep setup
     
     Attributes:
     -- filepath : str, The path to the file.

@@ -1,17 +1,34 @@
+""" General tools for fitting, that will be imported when `import ccukit.fittingtool`.
+
+functions:
+-- circle_fit: 還沒寫
+-- r2_score: Evaluate the R-squred value
+-- fit_and_plot: Fit x-y data and plot it. Returns fitted coefficients and R^2 value.
+
+Developer should add new function/class/object name in the `__all__` list.
+"""
+
 import numpy as np
 from scipy.optimize import curve_fit
 from matplotlib import pyplot as plt
-from sklearn.metrics import r2_score
+#from sklearn.metrics import r2_score
 import inspect
 
 __all__ = [
     'fit_and_plot',
     'circle_fit',
+    'r2_score'
 ]
 
 def circle_fit():
     """寫ㄚ"""
     return "還想circle fit, 自己寫ㄚ"
+
+def r2_score(y_true, y_pred):
+    """Evaluate the R-squred value."""
+    ss_res = np.sum((y_true - y_pred) ** 2)
+    ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
+    return 1 - (ss_res / ss_tot)
 
 def fit_and_plot(x_data,
                  y_data,

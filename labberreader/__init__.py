@@ -1,15 +1,13 @@
 """The labberreader packages. For tools to read labber measured data.
 
-Importing example:
+Expect `core.py`, other python files have only one class written in it.
+And those classes are imported when `import ccukit.labberreader`.
+
+User importing example:
 >>> from ccukit.labberreader import VNAxDC
 
-Expect `core.py`, other python file should be wrote to have one class only and it is with the same name as filename.
-And those classes should be automatically imported when using `import ccukit.labberreader`. Developer should write
->>> from .filename import ClassName
-where FileName is the same as ClassName and the capitcal letter convention is applyed on the class definition.
-
-
-
+Developer should write (in this __init__.py):
+>>> from .newfilename import NewClassName
 """
 
 from .vnaxdc import VNAxDC
