@@ -9,6 +9,7 @@ functions:
 submodules:
 -- fittingtool: Fitting tools, include common fitting formulas.
 -- labberreader: The labberreader packages. For tools to read labber measured data.
+-- visadriver: The driver to control visa instruments.
 
 """
 

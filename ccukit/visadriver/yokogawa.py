@@ -19,7 +19,7 @@ class YOKOGAWA:
     
     Example usage and adresses:
     >>> import pyvisa
-    >>> from ccukit.visadriver import YOKOGAWA
+    >>> from tsai14 import YOKOGAWA
     >>> rm = pyvisa.ResourceManager()
     >>> yoko1 = YOKOGAWA('DC1', rm.open_resource('USB0::0x0B21::0x0039::90ZC38697::0::INSTR'))
     >>> yoko2 = YOKOGAWA('DC2', rm.open_resource('USB0::0x0B21::0x0039::90ZC38696::0::INSTR'))
@@ -68,13 +68,25 @@ class YOKOGAWA:
 
     #### setter like method
     def visa_write(self, command):
-        """write SCPI command to yokogawa."""
+        """write SCPI command to yokogawa.
+        
+        Example usage:
+        >>> yoko1.visa_write('*CLS')
+        """
         self.visa_resource.write(command)
     def clear_error_flag(self):
-        """turn off the error led light on yokogawa."""
+        """turn off the error led light on yokogawa.
+        
+        Example usage:
+        >>> yoko1.clear_error_flag()
+        """
         self.visa_write('*CLS')
     def operation_setting(self, func: str, range: float):
         """specify function and range.
+
+            Example usage:
+            >>> yoko1.operation_setting('VOLT', 30)
+            >>> yoko2.operation_setting('CURR', 200e-3)
 
             func:
                 current supply: CURR.
@@ -92,10 +104,20 @@ class YOKOGAWA:
             f":SOUR:FUNC {func}; RANG {range}"
         )
     def output(self, on_or_off: str):
-        """set output by 'ON' or 'OFF'."""
+        """set output by 'ON' or 'OFF'.
+        
+        Example usage:
+        >>> yoko1.output('ON')
+        >>> yoko2.output('OFF')
+        """
         self.visa_write(f":OUTP {on_or_off}")
     def output_value(self, value: float):
-        """set output source level, in unit of V or A."""
+        """set output source level, in unit of V or A.
+        
+        Example usage:
+        >>> yoko1.output_value(200e-3)
+        >>> yoko2.output_value(100e-3)
+        """
         self.visa_write(f":SOUR:LEV {value}")
     def sweep(self, 
               goal_value, 
@@ -139,20 +161,37 @@ class YOKOGAWA:
 
     #### getter like method
     def visa_query(self, command):
-        """write SCPI command to yokogawa, return the response."""
+        """write SCPI command to yokogawa, return the response.
+        
+        Example usage:
+        >>> response = yoko1.visa_query('*IDN?')
+        """
         return self.visa_resource.query(command)
     def get_operation_setting(self) -> Tuple[str, float]:
-        """get current operation setting. 'VOLT' or 'CURR', and range."""
+        """get current operation setting. 'VOLT' or 'CURR', and range.
+        
+        Example usage:
+        >>> func, range = yoko1.get_operation_setting()
+        """
         func = self.visa_query(':SOUR:FUNC?')[:-1]
         range = float(self.visa_query(':SOUR:RANG?'))
         return func, range
     def get_output_status(self) -> str:
-        """get output states, 'ON' or 'OFF'."""
+        """get output states, 'ON' or 'OFF'.
+        
+        Example usage:
+        >>> status = yoko1.get_output_status()
+        >>> states_bool = True if states == 'ON' else False
+        """
         states_str = self.visa_query(':OUTP?')
         if states_str == '1\n': return 'ON'
         elif states_str == '0\n': return 'OFF'
     def get_output_value(self) -> float:
-        """get output source level, in unit of V or A."""
+        """get output source level, in unit of V or A.
+        
+        Example usage:
+        >>> output_value = yoko1.get_output_value()
+        """
         return float(self.visa_query(':SOUR:LEV?'))
 
     #### static methods
@@ -173,17 +212,40 @@ class YOKOGAWA:
     def demag_single(yoko: "YOKOGAWA", path: list, sweep_delta_time=0.05, sweep_delta_current=2e-3):
         """Run demag script for a single YOKOGAWA.
         It go through all the point in the `path`, by sweeping.
+
+        Example usage: See doc of YOKOGAWA.demag.
         """
         for point in path:
             yoko.sweep(point, sweep_delta_time, sweep_delta_current).join()
     @staticmethod
     def demag(yokos: List["YOKOGAWA"], path: list, sweep_delta_time=0.05, sweep_delta_current=2e-3):
-        """Run demag script for mutiple YOKOGAWAs."""
+        """Run demag script for mutiple YOKOGAWAs.
+        
+        Example usage:
+        >>> # define the demag path
+        >>> path = [150e-3, -120e-3, 90e-3, -60e-3, 20e-3, -10e-3, 5e-3, -1e-3, 0.00]
+        >>> 
+        >>> # demag, one can add # at front to only demag some of dcs
+        >>> yokos = [
+        >>>     #yoko1,
+        >>>     #yoko2,
+        >>>     yoko3,
+        >>>     yoko4
+        >>> ]
+        >>> for yoko in yokos: yoko.output('ON')
+        >>> YOKOGAWA.demag(
+        >>>     yokos,
+        >>>     path,
+        >>>     sweep_delta_time=0.05,
+        >>>     sweep_delta_current=2e-3
+        >>> )
+        >>> for yoko in yokos: yoko.output('OFF')
+        """
         threads = []
         for yoko in yokos:
             threads.append(threading.Thread( 
                 target=YOKOGAWA.demag_single, args=(yoko, path, sweep_delta_time, sweep_delta_current) 
-                ))
+            ))
         for thread in threads:
             thread.start()
         for thread in threads:

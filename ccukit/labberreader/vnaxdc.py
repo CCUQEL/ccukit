@@ -19,6 +19,8 @@ class VNAxDC:
     -- file : LabberHDF, The object to read labber measured data, the hfd5 file.
     -- info : dict, The dictionary contains information about measurment, e.g. n_pts, startf, stopf etc...
     -- VNA_traces : ndarray, The array contains VNA traces data.
+    -- freq: ndarray, The array of VNA sweeped frequency.
+    -- curr: 
     
     Methods:
         debackground(filepath: str, mode = '-', create_file = False) -> np.ndarray:
@@ -50,7 +52,11 @@ class VNAxDC:
             self._iflip = True
         if startf > stopf:
             self._fflip = True
-    
+        f_pts = self.info['VNA - # of points']
+        i_pts = self.info['VNA - # of traces']
+        self.freq = np.linspace(startf, stopf, f_pts)
+        self.curr = np.linspace(starti, stopi, i_pts)
+
     def _get_info(self, print_info = False):
         """Get informations about measurment, e.g. n_pts, startf, stopf etc... .
         
@@ -87,7 +93,7 @@ class VNAxDC:
         info['VNA - start frequency'] = startf
         info['VNA - stop frequency'] = stopf
         info['VNA - frequency step'] = stepf
-
+        
         # DC: find which dc supply is used and sweeping
         for no in VNAxDC.dc_supply_no:
             name = f'DC supply - {no} - Current'

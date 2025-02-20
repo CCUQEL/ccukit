@@ -8,40 +8,7 @@ from decimal import Decimal
 
 __all__ = [
     'LabberHDF',
-    'get_path',
 ]
-
-
-def get_path(ext: str, title = 'Select a file path', save_file = False):
-    """Pop up a dialog to browse a file path then return it.
-
-    Argumenumt
-    ----------
-    ext : string
-        The filename extestion.
-    title : string, optional
-        Default is 'Select a file path', the title displayed on the dialog.
-    save_file : bool, optioanl
-        Default is False. For it's True, it ask a path to save a file.
-    
-    Return
-    ----------
-    filepath : string
-        the selected filepath, empty string when canceled.
-    """
-    from tkinter import Tk, filedialog
-    import ctypes
-    ctypes.windll.shcore.SetProcessDpiAwareness(1)
-    root = Tk()
-    root.withdraw()
-    root.attributes("-topmost", True)
-    if save_file:
-        dialog = filedialog.asksaveasfilename
-    else:
-        dialog = filedialog.askopenfilename
-    filepath = dialog(filetypes = [(ext.upper() + ' Files', ext)],
-                      title = title)
-    return filepath
 
 class LabberHDF:
     """ The object to read labber measured data, the hfd5 file.
@@ -142,10 +109,10 @@ class LabberHDF:
                 
                 if step_type == 'Fixed step':
                     result_dict['step'] = step_item_dict['step']
-                    result_dict['n_pts'] = int(round(span/result_dict['step'])) + 1
+                    result_dict['n_pts'] = int(round( float(span) / result_dict['step'])) + 1
                 if step_type == 'Fixed # of pts':
                     result_dict['n_pts'] = int(step_item_dict['n_pts'])
-                    result_dict['step'] = float( span / (result_dict['n_pts']-1) )
+                    result_dict['step'] = float( float(span) / (result_dict['n_pts']-1) )
         return result_dict
 
     def _get_step_list_dict(self) -> dict:
