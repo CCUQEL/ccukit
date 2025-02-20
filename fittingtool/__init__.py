@@ -1,4 +1,4 @@
-"""fitting tools.
+"""Contains formulas, plotting tools, fitting tools to help analyze data.
 
 General tools in `tools.py  will be imported when `import ccukit.fittingtool`.
 

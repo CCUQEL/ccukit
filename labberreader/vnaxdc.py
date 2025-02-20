@@ -20,14 +20,12 @@ class VNAxDC:
     -- info : dict, The dictionary contains information about measurment, e.g. n_pts, startf, stopf etc...
     -- VNA_traces : ndarray, The array contains VNA traces data.
     -- freq: ndarray, The array of VNA sweeped frequency.
-    -- curr: 
+    -- curr: ndarray, The array of DC supply sweeped current.
     
     Methods:
-        debackground(filepath: str, mode = '-', create_file = False) -> np.ndarray:
-            Return debackgrounded VNA traces data. If create_file is True, 
-            it will add an hdf5 file for debackground data that log browser can open.
-        get_2dploting_objs(transpose = True) -> fig, ax, list, function
-            Returns fig, ax, extent, flipfunc. See doc for detail
+    -- get_traces_cut: Get a cut of trace base on icut, fcut.
+    -- debackground: Return debackgrounded VNA traces data. optinally to create new hdf5 file.
+    -- get_2dploting_objs: Returns fig, ax, extent, flipfunc. See doc for detail
     """
     dc_supply_no = ['1', '2', '3', '4', '5', '6']
     possible_traces = [
