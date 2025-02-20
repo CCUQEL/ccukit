@@ -19,7 +19,7 @@ class YOKOGAWA:
     
     Example usage and adresses:
     >>> import pyvisa
-    >>> from tsai14 import YOKOGAWA
+    >>> from ccukit.visadriver import YOKOGAWA
     >>> rm = pyvisa.ResourceManager()
     >>> yoko1 = YOKOGAWA('DC1', rm.open_resource('USB0::0x0B21::0x0039::90ZC38697::0::INSTR'))
     >>> yoko2 = YOKOGAWA('DC2', rm.open_resource('USB0::0x0B21::0x0039::90ZC38696::0::INSTR'))

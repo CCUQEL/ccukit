@@ -13,7 +13,7 @@ class KeySightEXG:
     
     Example usage and adresses:
     >>> import pyvisa
-    >>> from tasi14 import KeySightEXG
+    >>> from ccukit.visadriver import KeySightEXG
     >>> rm = pyvisa.ResourceManager()
     >>> rf1 = KeySightEXG('RF1', rm.open_resource('TCPIP0::192.168.1.5::INSTR'))
     
