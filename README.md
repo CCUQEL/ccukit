@@ -15,13 +15,13 @@ git clone https://github.com/CCUQEL/ccukit.git
 ```python
 from ccukit import get_path
 from ccukit.visadriver import YOKOGAWA
-from ccukit.labberreader import VNAXDC
+from ccukit.labberreader import VNAxDC
 from ccukit.fittingtool import fit_and_plot
 ```
 
 ## sub-modules overview
 - `visadriver`: Contains drivers to control visa instruments.
-- `labberreader`: Contains tools to read labber measured data.
+- `labberreader`: Contains tools to read Labber measured data.
 - `fittingtool`: Contains formulas, plotting tools, fitting tools to help data analysis.
 
 ## License
