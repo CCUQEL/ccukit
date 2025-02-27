@@ -18,7 +18,7 @@ class VNAxDC:
     -- filepath : str, The path to the file.
     -- file : LabberHDF, The object to read labber measured data, the hfd5 file.
     -- info : dict, The dictionary contains information about measurment, e.g. n_pts, startf, stopf etc...
-    -- VNA_traces : ndarray, The array contains VNA traces data.
+    -- vna_traces : ndarray, The array contains VNA traces data.
     -- freq: ndarray, The array of VNA sweeped frequency.
     -- curr: ndarray, The array of DC supply sweeped current.
     
@@ -89,9 +89,9 @@ class VNAxDC:
             raise Exception('No VNA trace found')
         info['VNA - trace'] = trace
         # NVA: Get number of traces, points; start, stop frequency
-        VNA_traces = self.file.get_trace_by_name(f'VNA - {trace}')
-        npts = VNA_traces.shape[0]
-        ntrc = VNA_traces.shape[2]
+        vna_traces = self.file.get_trace_by_name(f'VNA - {trace}')
+        npts = vna_traces.shape[0]
+        ntrc = vna_traces.shape[2]
         startf, stepf = self.file.get_trace_by_name(f'VNA - {trace}_t0dt')[0, :]
         stopf = startf + stepf * (npts-1)
         info['VNA - # of points'] = npts
@@ -150,17 +150,17 @@ class VNAxDC:
             If true, it creats a copy of `data_filepath` with _debg appended, with debg data.
         """
 
-        bg_trace = VNAxDC(bg_filepath).VNA_traces
-        extended_bg = bg_trace * np.ones_like(self.VNA_traces)
+        bg_trace = VNAxDC(bg_filepath).vna_traces
+        extended_bg = bg_trace * np.ones_like(self.vna_traces)
         if mode == '-':
             is_snn = self.info['VNA - trace'][1] == self.info['VNA - trace'][2]
             if is_snn:
-                debg_VNA_traces = self.VNA_traces - extended_bg
+                debg_vna_traces = self.vna_traces - extended_bg
             else:
                 # If you don't know why there are 1+, you are soooo stupid
-                debg_VNA_traces = 1 + self.VNA_traces - extended_bg
+                debg_vna_traces = 1 + self.vna_traces - extended_bg
         elif mode == '/':
-            debg_VNA_traces = self.VNA_traces / extended_bg
+            debg_vna_traces = self.vna_traces / extended_bg
         
         if create_file:
             import os
@@ -178,11 +178,11 @@ class VNAxDC:
             import h5py
             with h5py.File(debg_filepath, 'r+') as f:
                 # labber uses float16 to store data, np uses float128 by default
-                f['Traces'][f'VNA - {trace}'][:, 0, :] = np.real(debg_VNA_traces).astype(np.float16)
-                f['Traces'][f'VNA - {trace}'][:, 1, :] = np.imag(debg_VNA_traces).astype(np.float16)
+                f['Traces'][f'VNA - {trace}'][:, 0, :] = np.real(debg_vna_traces).astype(np.float16)
+                f['Traces'][f'VNA - {trace}'][:, 1, :] = np.imag(debg_vna_traces).astype(np.float16)
             print(f'Debackground file is creared at : "{debg_filepath}"')
         
-        return debg_VNA_traces
+        return debg_vna_traces
     
     def i2ind(self, current):
         no = self.info['Sweeping DC no']
@@ -270,13 +270,13 @@ class VNAxDC:
         else:
             cutted_current = self.curr_sweep[i_acceeser]
 
-        return cutted_freq, cutted_current, flipfunc(self.VNA_traces)[i_acceeser, f_acceeser]
+        return cutted_freq, cutted_current, flipfunc(self.vna_traces)[i_acceeser, f_acceeser]
 
     def get_2dploting_objs(self, transpose = True):
         """ Return figure, axes, extent that auto sets based on `info`. use plt.imshow() to plot.
 
         usage example:
-        >>> traces = exp.VNA_traces
+        >>> traces = exp.vna_traces
         >>> fig, ax, extend, flipfunc = exp1.get_2dploting_objs()
         >>> plt.imshow(
         >>>     flipfunc(np.abs(traces)), 
