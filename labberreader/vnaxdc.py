@@ -38,7 +38,7 @@ class VNAxDC:
         self.filepath = filepath
         self.file = LabberHDF(filepath)
         self.info = self._get_info(print_info=print_info)
-        self.VNA_traces = self._get_VNA_traces()
+        self.vna_traces = self._get_vna_traces()
         
         # find sweeping frequency
         startf = self.info['VNA - start frequency']
@@ -124,7 +124,7 @@ class VNAxDC:
                 print(key, ':', value)
         return info
 
-    def _get_VNA_traces(self):
+    def _get_vna_traces(self):
         """ Get data of VNA traces.
 
         Return
@@ -133,9 +133,9 @@ class VNAxDC:
             2d complex data, measured by VNA.
         """
         trace = self.info['VNA - trace']
-        NVA_traces_raw = self.file.get_trace_by_name(f'VNA - {trace}')
-        NVA_traces = NVA_traces_raw[:, 0, :] + NVA_traces_raw[:, 1, :]*1j
-        return NVA_traces
+        vna_traces_raw = self.file.get_trace_by_name(f'VNA - {trace}')
+        vna_traces = vna_traces_raw[:, 0, :] + vna_traces_raw[:, 1, :]*1j
+        return vna_traces
     
 
     def debackground(self, bg_filepath: str, mode:str = '/', create_file=False) -> np.ndarray:
