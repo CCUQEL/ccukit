@@ -39,21 +39,29 @@ class VNAxDC:
         self.file = LabberHDF(filepath)
         self.info = self._get_info(print_info=print_info)
         self.VNA_traces = self._get_VNA_traces()
-        # Check whether the sweep quantity is flipped
+        
+        # find sweeping frequency
         startf = self.info['VNA - start frequency']
         stopf = self.info['VNA - stop frequency']
-        dc_no = self.info['Sweeping DC no']
-        starti = self.info[f'DC{dc_no} - start current']
-        stopi = self.info[f'DC{dc_no} - stop current']
-        self._iflip, self._fflip = False, False
-        if starti > stopi:
-            self._iflip = True
-        if startf > stopf:
-            self._fflip = True
         f_pts = self.info['VNA - # of points']
-        i_pts = self.info['VNA - # of traces']
-        self.freq = np.linspace(startf, stopf, f_pts)
-        self.curr = np.linspace(starti, stopi, i_pts)
+        self.freq_sweep = np.linspace(startf, stopf, f_pts)
+
+        # find sweeping current (if any)
+        sweeping_dc_no = self.info.get('Sweeping DC no', None)
+        if sweeping_dc_no is not None:
+            starti = self.info[f'DC{sweeping_dc_no} - start current']
+            stopi = self.info[f'DC{sweeping_dc_no} - stop current']
+            i_pts = self.info['VNA - # of traces']
+            self.curr_sweep = np.linspace(starti, stopi, i_pts)
+
+            # Check whether the sweep quantity is flipped, for 2d plot
+            self._iflip, self._fflip = False, False
+            if starti > stopi:
+                self._iflip = True
+            if startf > stopf:
+                self._fflip = True
+            
+            
 
     def _get_info(self, print_info = False):
         """Get informations about measurment, e.g. n_pts, startf, stopf etc... .
@@ -200,8 +208,8 @@ class VNAxDC:
 
     def get_traces_cut(self, 
                        icut, 
-                       fcut=None) -> np.ndarray:
-        """ Get a cut of trace base on icut, fcut.
+                       fcut=None) -> tuple:
+        """ Get a cut of trace base on icut, fcut. Also return current and frequency.
 
         Arguments:
         -- icut : the current to cut, in unit of Ampere.
@@ -209,9 +217,14 @@ class VNAxDC:
         If cut is None, it'll show whole range, if it's a number, it'll cut single
         trace out as 1d array. If it is [lower, upper] list, it'll return a 2d array.
 
+        Returns:
+        -- cutted_freq : ndarray
+        -- cutted_current : ndarray
+        -- cutted_trace : ndarray
+
         Example usage:
-        >>> trace = exp1.get_traces_cut(icut = 50e-3, fcut = None)
-        >>> trace_detail = exp1.get_traces_cut(icut = 50e-3, fcut = [3e+9, 4e+9])
+        >>> cutted_freq, cutted_current, cutted_trace = exp1.get_traces_cut(icut = 50e-3)
+        >>> cutted_freq, cutted_current, trace_detail = exp1.get_traces_cut(icut = 50e-3, fcut = [3e+9, 4e+9])
 
         """
         flipfunc = self._get_flip_func(transpose=False)
@@ -248,14 +261,23 @@ class VNAxDC:
                 f0_ind, f1_ind = f1_ind, f0_ind
             f_acceeser = slice(f0_ind, f1_ind)
 
-        return flipfunc(self.VNA_traces)[i_acceeser, f_acceeser]
+        if self._fflip:
+            cutted_freq = np.flip(self.freq_sweep)[f_acceeser]
+        else:
+            cutted_freq = self.freq_sweep[f_acceeser]
+        if not self._iflip:
+            cutted_current = np.flip(self.curr_sweep)[i_acceeser]
+        else:
+            cutted_current = self.curr_sweep[i_acceeser]
+
+        return cutted_freq, cutted_current, flipfunc(self.VNA_traces)[i_acceeser, f_acceeser]
 
     def get_2dploting_objs(self, transpose = True):
         """ Return figure, axes, extent that auto sets based on `info`. use plt.imshow() to plot.
 
         usage example:
         >>> traces = exp.VNA_traces
-        >>> fig, ax, extend, flipfunc = exp1.get_ploting_objs()
+        >>> fig, ax, extend, flipfunc = exp1.get_2dploting_objs()
         >>> plt.imshow(
         >>>     flipfunc(np.abs(traces)), 
         >>>     aspect='auto',
