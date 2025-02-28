@@ -1,5 +1,52 @@
 """The core to read labber hdf file. By Neuro Sama :)
 
+Developer guide:
+
+One can first read the file, then use overview to see its components
+>>> file = LabberHDF(filepath)
+>>> file.overview('111')
+OUTPUT:
+|   Traces:
+|   0 : Time stamp
+|   1 : VNA - S11
+|   2 : VNA - S11_N
+|   3 : VNA - S11_t0dt
+|   ----------
+|   instrument config:
+|   0 : Rohde&Schwarz Network Analyzer 4 port - IP: 192.168.1.4, VNA at localhost
+|   1 : Yokogawa GS200 DC Source - USB: 0xB21::0x39::9017D5818, DC supply - 3 at localhost
+|   2 : Yokogawa GS200 DC Source - USB: 0xB21::0x39::90ZC38696, DC supply - 2 at localhost
+|   3 : Yokogawa GS200 DC Source - USB: 0xB21::0x39::90ZC38697, DC supply - 1 at localhost
+|   ----------
+|   step config:
+|   0 : DC supply - 1 - Current
+|   1 : DC supply - 1 - Output
+|   2 : DC supply - 2 - Current
+|   3 : DC supply - 2 - Output
+|   4 : DC supply - 3 - Current
+|   5 : DC supply - 3 - Output
+|   6 : VNA - # of averages
+|   7 : VNA - # of points
+|   8 : VNA - Average
+|   9 : VNA - Output enabled
+|   10 : VNA - Output power
+|   11 : VNA - S11 - Enabled
+|   12 : VNA - Start frequency
+|   13 : VNA - Stop frequency
+|   14 : VNA - Wait for new trace
+|   ----------
+
+Then one can use .get_trace_by_name(), .get_trace_by_index() etc... to get wanted item.
+>>> vna_s11_t0dt = file.get_trace_by_index(3)
+>>> vna_s11 = file.get_trace_by_name('VNA - S11')
+
+The attribute maps like `stepconfig_map` offers a method to loop through all names.
+>>> # Example: find all sweeping quantity
+>>> sweepings = []
+>>> for index, name in file.stepconfig_map.items():
+>>>     stepconfig = file.get_stepconfig_by_name(name)
+>>>     if stepconfig['Step items']['range_type'] == 'Sweep':
+>>>         sweepings.append((name, stepconfig))
 """
 
 import numpy as np
@@ -19,7 +66,7 @@ class LabberHDF:
         instconfig_map : dict[int, str]
             The map from interger to instrument config name.
         stepconfig_map : dict[int, dict]
-            The map from interger to step config dictionary.
+            The map from interger to step config name.
 
     Methods:
         overvirew(self) -> None:
@@ -44,7 +91,7 @@ class LabberHDF:
             groupname='Instrument config'
         )
         # Step configs (contains group)
-        self.stepconfig_map: dict[int, dict]= self._get_int2name_map(
+        self.stepconfig_map: dict[int, str]= self._get_int2name_map(
             groupname='Step config'
         )
         #
@@ -109,10 +156,10 @@ class LabberHDF:
                 
                 if step_type == 'Fixed step':
                     result_dict['step'] = step_item_dict['step']
-                    result_dict['n_pts'] = int(round( float(span) / result_dict['step'])) + 1
+                    result_dict['n_pts'] = int(round( span / Decimal(result_dict['step']))) + 1
                 if step_type == 'Fixed # of pts':
                     result_dict['n_pts'] = int(step_item_dict['n_pts'])
-                    result_dict['step'] = float( float(span) / (result_dict['n_pts']-1) )
+                    result_dict['step'] = float( span / Decimal(result_dict['n_pts']-1) )
         return result_dict
 
     def _get_step_list_dict(self) -> dict:

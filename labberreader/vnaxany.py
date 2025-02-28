@@ -1,4 +1,4 @@
-"""The single purpose module for exepriment of VNA with a DC supply sweep. By Neuro Sama :)
+"""The module to read general experiment with VNA and a sweeping quantity (VNAxANY)
 
 """
 
@@ -8,35 +8,36 @@ from matplotlib import pyplot as plt
 from numbers import Number
 
 __all__ = [
-    'VNAxDC',
+    'VNAxANY',
 ]
 
-class VNAxDC:
-    """An object to read expeiment data stored by labber, for VNA with a DC sweep setup.
-
-    It supports to read file without DC sweep, but many functionality will not supported then.
+class VNAxANY:
+    """An object to read expeiment data stored by labber, for VNA with any ohter is sweeping.
     
+    It supports to read file without sweep quantity, but many functionality will not supported then.
+
     Attributes:
     -- filepath : str, The path to the file.
     -- file : LabberHDF, The object to read labber measured data, the hfd5 file.
-    -- info : dict, The dictionary contains information about measurment, e.g. n_pts, startf, stopf etc...
-    -- vna_traces : ndarray, The array contains VNA traces data.
-    -- freq_sweep: ndarray, The array of VNA sweeped frequency.
-    -- curr_sweep: ndarray, The array of DC supply sweeped current.
+    -- info : dict, The dictionary contains information about measurmen.
+    -- vna_traces : ndarray, The array contains vna_traces traces data.
+    -- freq_sweep: ndarray, The array of VNA swpped frequency.
+    -- s_sweep: ndarray, The array of sweeped quantity other then VNA.
     
     Methods:
-    -- get_traces_cut: Get a cut of trace base on icut, fcut.
+    -- get_traces_cut: Get a cut of trace base on scut, fcut.
     -- debackground: Return debackgrounded VNA traces data. optinally to create new hdf5 file.
     -- get_2dploting_objs: Returns fig, ax, extent, flipfunc. See doc for detail
     """
-    dc_supply_no = ['1', '2', '3', '4', '5', '6']
     possible_traces = [
         'S11', 'S12', 'S13', 'S14',
         'S21', 'S22', 'S23', 'S24',
         'S31', 'S32', 'S33', 'S34',
         'S41', 'S42', 'S43', 'S44',
     ]
-    def __init__(self, filepath: str, print_info=False) -> None:
+    def __init__(self, filepath: str, 
+                 print_info=False,
+        ) -> None:
         self.filepath = filepath
         self.file = LabberHDF(filepath)
         self.info = self._get_info(print_info=print_info)
@@ -48,22 +49,20 @@ class VNAxDC:
         f_pts = self.info['VNA - # of points']
         self.freq_sweep = np.linspace(startf, stopf, f_pts)
 
-        # for sweeping current (if any)
-        sweeping_dc_no = self.info.get('Sweeping DC no', None)
-        if sweeping_dc_no is not None:
-            starti = self.info[f'DC{sweeping_dc_no} - start current']
-            stopi = self.info[f'DC{sweeping_dc_no} - stop current']
-            i_pts = self.info['VNA - # of traces']
-            self.curr_sweep = np.linspace(starti, stopi, i_pts)
+        # for other sweeping quantity, if any
+        if self.info['sweep - name'] is not None:
+            starts = self.info['sweep - start']
+            stops = self.info['sweep - stop']
+            s_pts = self.info['VNA - # of traces']
+            self.s_sweep = np.linspace(starts, stops, s_pts)
 
             # Check whether the sweep quantity is flipped, for 2d plot
-            self._iflip, self._fflip = False, False
-            if starti > stopi:
-                self._iflip = True
+            self._sflip, self._fflip = False, False
+            if starts > stops:
+                self._sflip = True
             if startf > stopf:
                 self._fflip = True
-            
-            
+        
 
     def _get_info(self, print_info = False):
         """Get informations about measurment, e.g. n_pts, startf, stopf etc... .
@@ -83,7 +82,7 @@ class VNAxDC:
         info = {}
         # NVA: Find which trace it has measured
         trace = ''
-        for trial_trace in VNAxDC.possible_traces:
+        for trial_trace in VNAxANY.possible_traces:
             if f'VNA - {trial_trace}' in self.file.traces_map.values():
                 trace = trial_trace
                 break
@@ -102,25 +101,26 @@ class VNAxDC:
         info['VNA - stop frequency'] = stopf
         info['VNA - frequency step'] = stepf
         
-        # DC: find which dc supply is used and sweeping
-        for no in VNAxDC.dc_supply_no:
-            name = f'DC supply - {no} - Current'
-            if name in self.file.stepconfig_map.values():
-                stepconfig = self.file.get_stepconfig_by_name(name)
-                step_item = stepconfig['Step items']
-                if step_item['range_type'] == 'Single':
-                    info[f'DC{no} - sweep'] = False
-                    info[f'DC{no} - current'] = step_item['single']
-                if step_item['range_type'] == 'Follow':
-                    info[f'DC{no} - sweep'] = False
-                    info[f'DC{no} - current'] = step_item['follow']
-                if step_item['range_type'] == 'Sweep':
-                    info[f'DC{no} - sweep'] = True
-                    info[f'DC{no} - start current'] = step_item['start']
-                    info[f'DC{no} - stop current'] = step_item['stop']
-                    info[f'DC{no} - # of steps'] = step_item['n_pts']
-                    info[f'DC{no} - current step'] = step_item['step']
-                    info[f'Sweeping DC no'] = no
+        # ANY: find sweeping quantity
+        sweepings = []
+        for index, name in self.file.stepconfig_map.items():
+            stepconfig = self.file.get_stepconfig_by_name(name)
+            if stepconfig['Step items']['range_type'] == 'Sweep':
+                sweepings.append((name, stepconfig))
+        if len(sweepings) == 0: 
+            info['sweep - name'] = None
+        elif len(sweepings) == 1:
+            sweeping_name, sweeping_stepconfig = sweepings[0]
+            info['sweep - name'] = sweeping_name
+            info['sweep - start'] = sweeping_stepconfig['Step items']['start']
+            info['sweep - stop'] = sweeping_stepconfig['Step items']['stop']
+            info['sweep - step'] = sweeping_stepconfig['Step items']['step']
+            # n_pts can be find as info['VNA - # of traces']
+        else:
+            raise Exception(
+                f'Only support 1 sweeping quantity, however there are {len(sweepings)}.'
+            ) from None
+
         if print_info:
             for key, value in info.items():
                 print(key, ':', value)
@@ -151,7 +151,7 @@ class VNAxDC:
             If true, it creats a copy of `data_filepath` with _debg appended, with debg data.
         """
 
-        bg_trace = VNAxDC(bg_filepath).vna_traces
+        bg_trace = VNAxANY(bg_filepath).vna_traces
         extended_bg = bg_trace * np.ones_like(self.vna_traces)
         if mode == '-':
             is_snn = self.info['VNA - trace'][1] == self.info['VNA - trace'][2]
@@ -185,19 +185,18 @@ class VNAxDC:
         
         return debg_vna_traces
     
-    def i2ind(self, current):
-        if self.info['Sweeping DC no'] is None:
-            raise Exception("i2ind not supported for data without dc sweep.")
+    def s2ind(self, s_value):
+        if self.info['sweep - name'] is None:
+            raise Exception("s2ind not supported for data without sweep quantity.")
 
-        no = self.info['Sweeping DC no']
-        i0 = self.info[f'DC{no} - start current']
-        i1 = self.info[f'DC{no} - stop current']
-        stepi = self.info[f'DC{no} - current step']
-        if (current < i0 and current < i1) or\
-        (current > i0 and current > i1):
+        s0 = self.info['sweep - start']
+        s1 = self.info['sweep - stop']
+        steps = self.info['sweep - step']
+        if (s_value < s0 and s_value < s1) or\
+        (s_value > s0 and s_value > s1):
             raise Exception(
-                f'specified current `{current}` is out of range' ) from None
-        return int(round( (current - i0)/stepi))
+                f'specified value `{s_value}` is out of range' ) from None
+        return int(round( (s_value - s0)/steps))
     def f2ind(self, freq):
         f0 = self.info['VNA - start frequency']
         f1 = self.info['VNA - stop frequency']
@@ -210,56 +209,56 @@ class VNAxDC:
         return int(round( (freq - f0) / stepf))
 
     def get_traces_cut(self, 
-                       icut, 
+                       scut, 
                        fcut=None) -> tuple:
-        """ Get a cut of trace base on icut, fcut. Also return current and frequency.
+        """ Get a cut of trace base on scut, fcut. Also return current and frequency.
 
         Arguments:
-        -- icut : the current to cut, in unit of Ampere.
+        -- scut : the sweeping quantity to cut, unit is the same as what Labber sets.
         -- fcut : the frequency to cut, in unit of Hz.
         If cut is None, it'll show whole range, if it's a number, it'll cut single
         trace out as 1d array. If it is [lower, upper] list, it'll return a 2d array.
 
         Returns:
         -- cutted_freq : ndarray
-        -- cutted_current : ndarray
+        -- cutted_s : ndarray
         -- cutted_trace : ndarray
 
         Example usage:
-        >>> cutted_freq, cutted_current, cutted_trace = exp1.get_traces_cut(icut = 50e-3)
-        >>> cutted_freq, cutted_current, trace_detail = exp1.get_traces_cut(icut = 50e-3, fcut = [3e+9, 4e+9])
+        >>> cutted_freq, cutted_s, cutted_trace = exp1.get_traces_cut(icut = 50e-3)
+        >>> cutted_freq, cutted_s, trace_detail = exp1.get_traces_cut(icut = 50e-3, fcut = [3e+9, 4e+9])
 
         """
-        if self.info['Sweeping DC no'] is None:
-            raise Exception("get_traces_cut not supported for data without dc sweep.")
-
+        if self.info['sweep - name'] is None:
+            raise Exception("get_traces_cut not supported for data without sweep quantity.")
+        
         flipfunc = self._get_flip_func(transpose=False)
-        # whole range for i
-        if icut == None:
-            i_acceeser = slice(None, None)
+        # whole range for s
+        if scut == None:
+            s_acceeser = slice(None, None)
         # single f trace
-        elif isinstance(icut, Number):
-            i_ind = self.i2ind(icut)
-            i_acess_ind = (self.info['VNA - # of traces'] - 1) - i_ind
-            i_acceeser = i_acess_ind
+        elif isinstance(scut, Number):
+            s_ind = self.s2ind(scut)
+            s_acess_ind = (self.info['VNA - # of traces'] - 1) - s_ind
+            s_acceeser = s_acess_ind
         # mutiple f traces
         else:
-            i0_ind = self.i2ind(icut[0])
-            i1_ind = self.i2ind(icut[1])
-            i0_acess_ind = (self.info['VNA - # of traces'] - 1) - i0_ind
-            i1_acess_ind = (self.info['VNA - # of traces'] - 1) - i1_ind
-            if i0_acess_ind > i1_acess_ind:
-                i0_acess_ind, i1_acess_ind = i1_acess_ind, i0_acess_ind
-            i_acceeser = slice(i0_acess_ind, i1_acess_ind)
+            s0_ind = self.s2ind(scut[0])
+            s1_ind = self.s2ind(scut[1])
+            s0_acess_ind = (self.info['VNA - # of traces'] - 1) - s0_ind
+            s1_acess_ind = (self.info['VNA - # of traces'] - 1) - s1_ind
+            if s0_acess_ind > s1_acess_ind:
+                s0_acess_ind, s1_acess_ind = s1_acess_ind, s0_acess_ind
+            s_acceeser = slice(s0_acess_ind, s1_acess_ind)
 
         # whole range for f
         if fcut == None:
             f_acceeser = slice(None, None)
-        # single i trace
+        # single s trace
         elif isinstance(fcut, Number):
             f_ind = self.f2ind(fcut)
             f_acceeser = f_ind
-        # mutiple i traces
+        # mutiple s traces
         else:
             f0_ind = self.f2ind(fcut[0])
             f1_ind = self.f2ind(fcut[1])
@@ -271,12 +270,12 @@ class VNAxDC:
             cutted_freq = np.flip(self.freq_sweep)[f_acceeser]
         else:
             cutted_freq = self.freq_sweep[f_acceeser]
-        if not self._iflip:
-            cutted_current = np.flip(self.curr_sweep)[i_acceeser]
+        if not self._sflip:
+            cutted_current = np.flip(self.s_sweep)[s_acceeser]
         else:
-            cutted_current = self.curr_sweep[i_acceeser]
+            cutted_current = self.s_sweep[s_acceeser]
 
-        return cutted_freq, cutted_current, flipfunc(self.vna_traces)[i_acceeser, f_acceeser]
+        return cutted_freq, cutted_current, flipfunc(self.vna_traces)[s_acceeser, f_acceeser]
 
     def get_2dploting_objs(self, transpose = True):
         """ Return figure, axes, extent that auto sets based on `info`. use plt.imshow() to plot.
@@ -310,32 +309,32 @@ class VNAxDC:
         flipfunc: function
             Apply to VNA_trace data to print it correctly.
         """
-        if self.info['Sweeping DC no'] is None:
-            raise Exception("get_2dploting_objs not supported for data without dc sweep.")
+        if self.info['sweep - name'] is None:
+            raise Exception("get_2dploting_objs is not supported for data without sweep quantity.")
 
         # Gather nessesay informations
         startf = self.info['VNA - start frequency']
         stopf = self.info['VNA - stop frequency']
         trace = self.info['VNA - trace']
-        dc_no = self.info['Sweeping DC no']
-        starti = self.info[f'DC{dc_no} - start current']
-        stopi = self.info[f'DC{dc_no} - stop current']
+        sname = self.info['sweep - name']
+        starts = self.info['sweep - start']
+        stops = self.info['sweep - stop']
     
         # cearting fig and ax and apply settings
         fig, ax = plt.subplots()
         if not self._fflip: f0, f1 = startf, stopf
         else: f0, f1 = stopf, startf
-        if not self._iflip: i0, i1 = starti, stopi
-        else: i0, i1 = stopi, starti
+        if not self._sflip: s0, s1 = starts, stops
+        else: s0, s1 = stops, starts
         if transpose:
-            extent = [i0*1e3, i1*1e3, f0/1e9, f1/1e9]
+            extent = [s0, s1, f0/1e9, f1/1e9]
             ax.set_title(trace)
-            ax.set_xlabel(f'DC{dc_no} current / mA')
+            ax.set_xlabel(sname)
             ax.set_ylabel('VNA frequency / GHz')
         else:
-            extent = [f0/1e9, f1/1e9, i0*1e3, i1*1e3]
+            extent = [f0/1e9, f1/1e9, s0, s1]
             ax.set_title(trace)
-            ax.set_ylabel(f'DC{dc_no} current / mA')
+            ax.set_ylabel(sname)
             ax.set_xlabel('VNA frequency / GHz')
 
         flipfunc = self._get_flip_func(transpose=transpose)
@@ -359,13 +358,13 @@ class VNAxDC:
             if transpose:
                 if not self._fflip:
                     data = np.flip(data, axis=0)
-                if self._iflip:
+                if self._sflip:
                     data = np.flip(data, axis=1)
             if not transpose:
                 data = data.T
                 if self._fflip:
                     data = np.flip(data, axis=1)
-                if not self._iflip:
+                if not self._sflip:
                     data = np.flip(data, axis=0)
             return data
         return flipfunc
