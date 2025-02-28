@@ -209,7 +209,7 @@ class VNAxANY:
         return int(round( (freq - f0) / stepf))
 
     def get_traces_cut(self, 
-                       scut, 
+                       scut=None, 
                        fcut=None) -> tuple:
         """ Get a cut of trace base on scut, fcut. Also return current and frequency.
 
@@ -225,8 +225,8 @@ class VNAxANY:
         -- cutted_trace : ndarray
 
         Example usage:
-        >>> cutted_freq, cutted_s, cutted_trace = exp1.get_traces_cut(icut = 50e-3)
-        >>> cutted_freq, cutted_s, trace_detail = exp1.get_traces_cut(icut = 50e-3, fcut = [3e+9, 4e+9])
+        >>> cutted_freq, cutted_s, cutted_trace = exp1.get_traces_cut(scut = 50e-3)
+        >>> cutted_freq, cutted_s, trace_detail = exp1.get_traces_cut(scut = 50e-3, fcut = [3e+9, 4e+9])
 
         """
         if self.info['sweep - name'] is None:

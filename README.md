@@ -9,15 +9,21 @@ It is recommended to clone the repository onto local device for using it:
 ```sh
 git clone https://github.com/CCUQEL/ccukit.git
 ```
+one can also download as zip onto local device.
 
 ## Importing Examples
 
 ```python
+import sys
+sys.path.insert(0, 'c:\\Users\\QEL\\Desktop\\py') # add path of where ccukit located
 from ccukit import get_path
 from ccukit.visadriver import YOKOGAWA
 from ccukit.labberreader import VNAxDC
 from ccukit.fittingtool import fit_and_plot
 ```
+It is recommaned to have the workspace contains the folder of ccukit to see its docstring. For example,
+the workspace we used is `c:\Users\QEL\Desktop\py`, we use VScode to open this folder and use it.
+
 
 ## sub-modules overview
 - `visadriver`: Contains drivers to control visa instruments.

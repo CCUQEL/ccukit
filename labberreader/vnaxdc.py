@@ -210,7 +210,7 @@ class VNAxDC:
         return int(round( (freq - f0) / stepf))
 
     def get_traces_cut(self, 
-                       icut, 
+                       icut=None, 
                        fcut=None) -> tuple:
         """ Get a cut of trace base on icut, fcut. Also return current and frequency.
 
