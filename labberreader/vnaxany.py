@@ -281,7 +281,7 @@ class VNAxANY:
         """ Return figure, axes, extent that auto sets based on `info`. use plt.imshow() to plot.
 
         usage example:
-        >>> traces = exp.vna_traces
+        >>> traces = exp1.vna_traces
         >>> fig, ax, extend, flipfunc = exp1.get_2dploting_objs()
         >>> plt.imshow(
         >>>     flipfunc(np.abs(traces)), 
