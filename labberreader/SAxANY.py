@@ -138,12 +138,7 @@ class SAxANY:
         bg_trace = SAxANY(bg_filepath).sa_traces
         extended_bg = bg_trace * np.ones_like(self.sa_traces)
         if mode == '-':
-            is_snn = self.info['SA - trace'][1] == self.info['SA - trace'][2]
-            if is_snn:
-                debg_sa_traces = self.sa_traces - extended_bg
-            else:
-                # If you don't know why there are 1+, you are soooo stupid
-                debg_sa_traces = 1 + self.sa_traces - extended_bg
+            debg_traces = self.sa_traces - extended_bg
         elif mode == '/':
             debg_traces = self.sa_traces / extended_bg
         
