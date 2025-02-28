@@ -4,12 +4,12 @@
 
 ## Using ccukit
 
-It is recommended to clone the repository onto local device for using it:
+It is recommended to clone the repository or download as zip onto local device for using it:
 
 ```sh
 git clone https://github.com/CCUQEL/ccukit.git
 ```
-one can also download as zip onto local device.
+
 
 ## Importing Examples
 
