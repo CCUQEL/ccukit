@@ -51,13 +51,13 @@ def plot_trace(freq, signal):
     """Plot the trace of Imaginary vs Real, Magnitude vs Frequency, and Phase vs Frequency."""
 
     # Create figure and subplots
-    fig, axes = plt.subplots(1, 3, figsize=(11, 3.8))
+    fig, axes = plt.subplots(1, 3, figsize=(12, 4))
     
     # Plot Imaginary vs Real part
     axes[0].plot(np.real(signal), np.imag(signal), 'y.')
     axes[0].set_xlabel("Real")
     axes[0].set_ylabel("Imaginary")
-    axes[0].set_title("Imaginary vs Real")
+    axes[0].set_title("Imaginary vs Real", fontsize=17)
     axes[0].set_aspect('equal')
     axes[0].grid()
     
@@ -65,7 +65,7 @@ def plot_trace(freq, signal):
     axes[1].plot(freq, np.abs(signal), '-')
     axes[1].set_xlabel("Frequency")
     axes[1].set_ylabel("Magnitude")
-    axes[1].set_title("Magnitude vs Frequency")
+    axes[1].set_title("Magnitude vs Frequency", fontsize=17)
     axes[1].set_xlim([min(freq), max(freq)])
     #axes[1].tick_params(axis='both', which='major', labelsize=12)
     axes[1].grid()
@@ -75,7 +75,7 @@ def plot_trace(freq, signal):
     axes[2].plot(freq, np.angle(signal), '-')
     axes[2].set_xlabel("Frequency")
     axes[2].set_ylabel("Phase")
-    axes[2].set_title("Phase vs Frequency")
+    axes[2].set_title("Phase vs Frequency", fontsize=17)
     axes[2].set_xlim([min(freq), max(freq)])
     #axes[2].tick_params(axis='both', which='major', labelsize=12)
     axes[2].grid()
