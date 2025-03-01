@@ -62,7 +62,7 @@ def plot_trace(freq, signal):
     
     # Plot Magnitude vs Frequency
     axes[1].plot(freq, np.abs(signal), '-')
-    axes[1].set_xlabel("Frequency Index")
+    axes[1].set_xlabel("Frequency")
     axes[1].set_ylabel("Magnitude")
     axes[1].set_title("Magnitude vs Frequency")
     axes[1].set_xlim([min(freq), max(freq)])
@@ -70,7 +70,7 @@ def plot_trace(freq, signal):
     
     # Plot Phase vs Frequency
     axes[2].plot(freq, np.angle(signal), '-')
-    axes[2].set_xlabel("Frequency Index")
+    axes[2].set_xlabel("Frequency")
     axes[2].set_ylabel("Phase (radians)")
     axes[2].set_title("Phase vs Frequency")
     axes[2].set_xlim([min(freq), max(freq)])
