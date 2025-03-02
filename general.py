@@ -72,7 +72,7 @@ def plot_trace(freq, signal):
     
     
     # Plot Phase vs Frequency
-    axes[2].plot(freq, np.angle(signal), '-')
+    axes[2].plot(freq, np.unwrap(np.angle(signal)), '-')
     axes[2].set_xlabel("Frequency")
     axes[2].set_ylabel("Phase")
     axes[2].set_title("Phase vs Frequency", fontsize=17)
