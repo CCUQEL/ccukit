@@ -14,4 +14,4 @@ Developer should write (in this __init__.py):
 >>> from .general import new_func
 """
 
-from .general import get_path, plot_trace, set_plot_style
+from .general import get_path, plot_trace, set_plot_style, save_to_csv

@@ -11,11 +11,13 @@ from tkinter import Tk, filedialog
 import ctypes
 from matplotlib import pyplot as plt
 import numpy as np
+import csv
 
 __all__ = [
     'get_path',
     'plot_trace',
     'set_plot_style',
+    'save_to_csv'
 ]
 
 def get_path(ext: str, title = 'Select a file path', save_file = False):
@@ -174,3 +176,30 @@ def set_plot_style():
     }
 
     return hollow_marker_setting
+
+def save_to_csv(filename, title_array, data_array):
+    """
+    Saves the given title_array and data_array to a CSV file with two columns.
+    
+    Example:
+    >>> data1 = [1, 2, 3, 4]
+    >>> data2 = [5, 6, 7, 8]
+    >>> title_array = ["Column 1", "Column 2"]
+    >>> data_array = [data1, data2]
+    >>> save_to_csv("data.csv", title_array, data_array)
+    
+    Parameters:
+    filename (str): Name of the CSV file to save.
+    title_array (list): List containing two column titles.
+    data_array (list or numpy.ndarray): 2D list or numpy array where each sublist represents a column.
+    """
+    # Ensure data_array is a numpy array for easier column-wise processing
+    data_array = np.array(data_array)
+    
+    # Transpose data to align with two-column format
+    data_array = data_array.T.tolist()
+    
+    with open(filename, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(title_array)  # Write the header row
+        writer.writerows(data_array)  # Write the data as two columns
