@@ -136,7 +136,7 @@ class YOKOGAWA:
         Example usage:
         >>> YOKOGAWA.wait_for_sweeping(
                 yoko1.sweep(200e-3, 0.1, 10e-3),
-                yoko2.sweep(200e-3, 0.1, 10e-3)
+                yoko2.sweep(200e-3, 0.1, 10e-3),
                 yoko3.sweep(50e-3,  0.1, 10e-3)
             )
         >>> # Thie line will be arrived after all DCs finished sweeping.

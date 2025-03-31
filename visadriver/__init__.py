@@ -13,3 +13,4 @@ Developer should write (in this __init__.py):
 from .yokogawa import YOKOGAWA
 from .keysightexg import KeySightEXG
 from .rsrfsource import RSRFSource
+from .rsvna import RSVNA
