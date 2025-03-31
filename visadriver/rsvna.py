@@ -107,6 +107,7 @@ class RSVNA:
     def n_avg(self, n_avg: int):
         """set number of aveage, 0 for not avaeageing."""
         if n_avg == 0:
+            self.visa_write(f":SENS:AVER:COUN 1")
             self.visa_write(f":SENS:AVER 0")
         else:
             self.visa_write(f":SENS:AVER:COUN {int(n_avg)}")
@@ -154,9 +155,19 @@ class RSVNA:
         if states_str == '1\n': return 'ON'
         elif states_str == '0\n': return 'OFF'
 
-    def get_trace_data(self, s_parm_str: str) -> np.ndarray:
+    def measure_trace(self, s_parm_str: str, python_avg=True) -> np.ndarray:
         """Get trace data for S parameter measurement, empty array for not measureing.
         
+        Args:
+            s_parm_str (string): S parameter to be measured. 'S11', 'S12', 'S21', 'S22' etc.
+            python_avg (bool): default is true, use VNA setting to do average in python, see doc.
+
+        Explanation:
+            In newer version of VNA, it has no funtionality to obtain current process of 
+            averaged trace, so I consult the value mutiple times to simulate the avarge
+            in this code. Another approach is to approximate the time it tooks and use sleep.
+            If anyone have a better approach, please fix this.
+
         Example usage:
         >>> s21 = vna.get_trace_data('S21')
         >>> freq = vna.get_freqs()
@@ -171,34 +182,45 @@ class RSVNA:
         channel_name = self.sparm_channels_map[s_parm_str][-1] # get last active channel
         self.visa_write(f"CALC:PAR:SEL '{channel_name}'")
         
-        # 1. switch to single sweep mode, 2. restart a sweep,  3. wait for it to complete
-        self.visa_write(':ABOR;:INIT:CONT OFF;:INIT:IMM;*OPC')
-        sweep_finished = False
-        while not sweep_finished:
-            sleep(0.05)
-            stb = int(self.visa_query('*ESR?'))
-            sweep_finished = (stb & 1) > 0
+        if python_avg and self.visa_query(':SENS:AVER?') == '1\n':
+            n_avg = int(self.visa_query(':SENS:AVER:COUN?'))
+        else:
+            n_avg = 1
 
-        # consult s parameter value. 
-        # This method of low level acess is copied from Labber driver for R&S VNA
-        self.visa_write(':FORM REAL,32')
-        self.visa_resource.write("CALC:DATA? SDATA")
-        raw_data = self.visa_resource.read_raw()
-        self.visa_write('*CLS;:INIT:CONT ON;') # turn VNA back to continous sweeping mode. 
+        cont_avg_v_complex = np.zeros(int(self.visa_query(':SENS:SWE:POIN?')))
+        for sweep_no in range(1, n_avg+1):
+            # 1. switch to single sweep mode, 2. restart a sweep,  3. wait for it to complete
+            self.visa_write(':ABOR;:INIT:CONT OFF;:INIT:IMM;*OPC')
+            sweep_finished = False
+            while not sweep_finished:
+                sleep(0.05)
+                stb = int(self.visa_query('*ESR?'))
+                sweep_finished = (stb & 1) > 0
 
-        # convert raw data to measurment values
-        # This method of low level acess is copied from Labber driver for R&S VNA
-        i0 = raw_data.find(b'#')
-        n_dig = int(raw_data[i0+1 : i0+2])
-        n_byte = int(raw_data[i0+2 : i0+2 + n_dig])
-        n_data = int(n_byte/4)
-        n_pts = int(n_data/2)
-        v_data = np.frombuffer(
-            raw_data[(i0+2 + n_dig) : (i0+2 + n_dig + n_byte)], 
-            dtype='>f', count=n_data)
-        v_data_2col = v_data.reshape((n_pts, 2)) # data is in "I0, Q0, I1, Q1, I2, Q2, .." format
-        v_complex = v_data_2col[:, 0] + 1j*v_data_2col[:, 1]
-        return v_complex
+            # consult s parameter value. 
+            # This method of low level acess is copied from Labber driver for R&S VNA
+            self.visa_write(':FORM REAL,32')
+            self.visa_resource.write("CALC:DATA? SDATA")
+            raw_data = self.visa_resource.read_raw()
+            self.visa_write('*CLS;:INIT:CONT ON;') # turn VNA back to continous sweeping mode. 
+
+            # convert raw data to measurment values
+            # This method of low level acess is copied from Labber driver for R&S VNA
+            i0 = raw_data.find(b'#')
+            n_dig = int(raw_data[i0+1 : i0+2])
+            n_byte = int(raw_data[i0+2 : i0+2 + n_dig])
+            n_data = int(n_byte/4)
+            n_pts = int(n_data/2)
+            v_data = np.frombuffer(
+                raw_data[(i0+2 + n_dig) : (i0+2 + n_dig + n_byte)], 
+                dtype='>f', count=n_data)
+            v_data_2col = v_data.reshape((n_pts, 2)) # data is in "I0, Q0, I1, Q1, I2, Q2, .." format
+            v_complex = v_data_2col[:, 0] + 1j*v_data_2col[:, 1]
+
+            # continuous avarging
+            cont_avg_v_complex = (cont_avg_v_complex*(sweep_no-1) + v_complex) / sweep_no
+
+        return cont_avg_v_complex
     
     def get_trace_data_currently(self, suppress_warn=False) -> np.ndarray:
         """Get trace data of current ONLY measurement. (lagcy)"""
