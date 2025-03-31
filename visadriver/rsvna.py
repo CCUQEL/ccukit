@@ -62,7 +62,7 @@ class RSVNA:
 
     Getter like method:
     -- visa_query: write SCPI command to R&S VNA, return the response.
-    *- measure: get trace data for Snm (S11, S21 etc).
+    *- measure_trace: measure and get trace data for Snm (S11, S21 etc).
     
     """
     # ref: see SCPI reference for R&S VNA, at p1025 of user manual. 
