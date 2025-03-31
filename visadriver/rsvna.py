@@ -5,6 +5,8 @@
 
 from pyvisa.resources import Resource
 import numpy as np
+from time import sleep
+
 __all__ = [
     'RSVNA',
 ]
@@ -23,12 +25,12 @@ class RSVNA:
     Attributes:
     -- id: the id of the R&S VNA.
     -- visa_resource: the visa resource of the R&S VNA.
-    
+    -- sparm_channel_map: a dictionary that maps s parameter to channel names.
+
     Setter like method:
     -- visa_write: write SCPI command to R&S VNA.
-    -- reset: reset the VNA settings.
-    *- enable_snm: set Snm to be enable, like S11, S21 etc.
-    *- disable_snm: set Snm to be disable, like S11, S21 etc.
+    -- clear_error_flag: clear error flag of R&S VNA.
+    *- s_parm_enabled: set Snm (S11, S21 etc) to be enable or disable.
     *- output: set output to 'ON' or 'OFF'.
     *- power: set the output power, in dBm.
     *- freq_start_stop: set the sweeping frequency by start-stop.
@@ -38,7 +40,8 @@ class RSVNA:
 
     Getter like method:
     -- visa_query: write SCPI command to R&S VNA, return the response.
-    *- get_trace_data: get trace data for current view.
+    *- get_trace_data: get trace data for Snm (S11, S21 etc).
+    -- get_trace_data_currently: Get trace data of current ONLY measurement. (lagcy)
     
     """
     # RSVNA_resource.query(...):
@@ -51,13 +54,33 @@ class RSVNA:
     def __init__(self, id: str, visa_resource: Resource) -> None:
         self.id = id
         self.visa_resource = visa_resource
+        self.sparm_channels_map: dict[str, list[str]] = {}
+
+    def update_sparm_channels_map(self):
+        """
+        This method of acess S parameter names and storage is copied from Labber driver for R&S VNA.
+        """
+        self.sparm_channels_map = {}
+        parmcat = self.visa_query("CALC:PAR:CAT?")[1:-2] # get rid of ' and \n
+        items = parmcat.split(',') # e.g. 'CH4TR1,S11,CH4TR2,S12'
+        n_measurements = len(items) // 2
+        for n in range(n_measurements):
+            channel_name = items[2*n] # e.g. 'CH4TR1', 'CH4TR2'
+            s_parm = items[2*n + 1]   # e.g. 'S11', 'S12'
+            if s_parm not in self.sparm_channels_map:
+                # create list with current name
+                self.sparm_channels_map[s_parm] = [channel_name,]
+            else:
+                # add to existing list
+                self.sparm_channels_map[s_parm].append(channel_name)
+
 
     #### setter like method
     def visa_write(self, command):
         """write SCPI command to R&S VNA."""
         self.visa_resource.write(command)
-    def reset(self):
-        """Reset the VNA."""
+    def clear_error_flag(self):
+        """clear error flag of R&S VNA."""
         self.visa_resource.write('*CLS')
     def output(self, on_or_off: str):
         """ON or OFF."""
@@ -89,30 +112,32 @@ class RSVNA:
             self.visa_write(f":SENS:AVER:COUN {int(n_avg)}")
             self.visa_write(f":SENS:AVER 1")
 
-    # def enable_snm(self, s_name: str):
-    #     """set Snm to be enable, like S11, S21 etc."""
-    #     param = s_name
-    #     self.getActiveMeasurements()
-    #     # clear old measurements for this parameter
-    #     if param in self.dMeasParam:
-    #         for name in self.dMeasParam[param]:
-    #             self.writeAndLog("CALC:PAR:DEL '%s'" % name)
-    #     # create new measurement,
-    #     newName = 'LabC_%s' % param
-    #     self.visa_write("CALC:PAR:SDEF '%s','%s'" % (newName, param))
-    #     # show on PNA screen
-    #     iTrace = 1 + [
-    #         'S11', 'S12', 'S13', 'S14', 
-    #         'S21', 'S22', 'S23', 'S24', 
-    #         'S31', 'S32', 'S33', 'S34', 
-    #         'S41', 'S42', 'S43', 'S44'
-    #     ].index(param)
-    #     self.visa_write("DISP:WIND:TRAC%d:FEED '%s'" % (iTrace, newName))
-    #     # add to dict with list of measurements
-    #     self.dMeasParam[param] = [newName]
-
-
-
+    def s_parm_enabled(self, s_parm_str: str, enabled: bool):
+        """set Snm to be enable, like S11, S21 etc.
+        
+        Example usage:
+        >>> vna.s_parm_enabled('S11', True)
+        >>> vna.s_parm_enabled('S21', False)
+        """
+        self.update_sparm_channels_map()
+        # create new measurement, is enable is true
+        if enabled:
+            new_name = 'LabC_%s' % s_parm_str
+            self.visa_write(f"CALC:PAR:SDEF '{new_name}','{s_parm_str}'")
+            # show on PNA screen
+            iTrace = 1 + [
+                'S11', 'S12', 'S13', 'S14', 
+                'S21', 'S22', 'S23', 'S24', 
+                'S31', 'S32', 'S33', 'S34', 
+                'S41', 'S42', 'S43', 'S44'
+            ].index(s_parm_str)
+            self.visa_write(f"DISP:WIND:TRAC{iTrace}:FEED '{new_name}'")
+        # delete the measurment is enable is false, and it is currently enabled
+        if not enabled:
+            if s_parm_str in self.sparm_channels_map:
+                for name in self.sparm_channels_map[s_parm_str]:
+                    self.visa_write(f"CALC:PAR:DEL '{name}'")
+        self.update_sparm_channels_map()
 
     #### getter like method
     def visa_query(self, command):
@@ -129,14 +154,61 @@ class RSVNA:
         if states_str == '1\n': return 'ON'
         elif states_str == '0\n': return 'OFF'
 
-    def get_trace_data(self, suppress_warn=False):
-        """Get trace data of current ONLY setting."""
+    def get_trace_data(self, s_parm_str: str) -> np.ndarray:
+        """Get trace data for S parameter measurement, empty array for not measureing.
+        
+        Example usage:
+        >>> s21 = vna.get_trace_data('S21')
+        >>> freq = vna.get_freqs()
+        >>> plt.plot(freq, np.abs(s21))
+        """
+        # update the currentlt measuring quantites, return empy array for not measureing
+        self.update_sparm_channels_map()
+        if s_parm_str not in self.sparm_channels_map:
+            return np.array([])
+
+        # get channel name for this measurement and set it to focus for VNA
+        channel_name = self.sparm_channels_map[s_parm_str][-1] # get last active channel
+        self.visa_write(f"CALC:PAR:SEL '{channel_name}'")
+        
+        # 1. switch to single sweep mode, 2. restart a sweep,  3. wait for it to complete
+        self.visa_write(':ABOR;:INIT:CONT OFF;:INIT:IMM;*OPC')
+        sweep_finished = False
+        while not sweep_finished:
+            sleep(0.05)
+            stb = int(self.visa_query('*ESR?'))
+            sweep_finished = (stb & 1) > 0
+
+        # consult s parameter value. 
+        # This method of low level acess is copied from Labber driver for R&S VNA
+        self.visa_write(':FORM REAL,32')
+        self.visa_resource.write("CALC:DATA? SDATA")
+        raw_data = self.visa_resource.read_raw()
+        self.visa_write('*CLS;:INIT:CONT ON;') # turn VNA back to continous sweeping mode. 
+
+        # convert raw data to measurment values
+        # This method of low level acess is copied from Labber driver for R&S VNA
+        i0 = raw_data.find(b'#')
+        n_dig = int(raw_data[i0+1 : i0+2])
+        n_byte = int(raw_data[i0+2 : i0+2 + n_dig])
+        n_data = int(n_byte/4)
+        n_pts = int(n_data/2)
+        v_data = np.frombuffer(
+            raw_data[(i0+2 + n_dig) : (i0+2 + n_dig + n_byte)], 
+            dtype='>f', count=n_data)
+        v_data_2col = v_data.reshape((n_pts, 2)) # data is in "I0, Q0, I1, Q1, I2, Q2, .." format
+        v_complex = v_data_2col[:, 0] + 1j*v_data_2col[:, 1]
+        return v_complex
+    
+    def get_trace_data_currently(self, suppress_warn=False) -> np.ndarray:
+        """Get trace data of current ONLY measurement. (lagcy)"""
         if self.get_output_status() == 'OFF':
             if not suppress_warn:
                 print('warning: output is off, the value is not formatted corretly.')
 
-        # now only support getting one trace, so it grab the first one
         parcat = self.visa_query('CALC:PAR:CAT?')[1:-2] # get rid of ' and \n
+        if parcat == '':
+            raise Exception('No measurements is on VNA now')
         channel_name = parcat.split(',')[0] # get first channel name
         s_name = parcat.split(',')[1] # get first s name
         self.visa_write(f"CALC:PAR:SEL '{channel_name}'")
@@ -146,14 +218,13 @@ class RSVNA:
         self.visa_resource.write("CALC:DATA? SDATA")
         raw_data = self.visa_resource.read_raw()
         i0 = raw_data.find(b'#')
-        nDig = int(raw_data[i0+1:i0+2])
-        nByte = int(raw_data[i0+2:i0+2+nDig])
-        nData = int(nByte/4)
-        nPts = int(nData/2)
-        # get data to numpy array
-        vData = np.frombuffer(raw_data[(i0+2+nDig):(i0+2+nDig+nByte)], 
-                                dtype='>f', count=nData)
-        # data is in I0,Q0,I1,Q1,I2,Q2,.. format, convert to complex
-        mC = vData.reshape((nPts,2))
-        vComplex = mC[:,0] + 1j*mC[:,1]
-        return vComplex
+        n_dig = int(raw_data[i0+1 : i0+2])
+        n_byte = int(raw_data[i0+2 : i0+2 + n_dig])
+        n_data = int(n_byte/4)
+        n_pts = int(n_data/2)
+        v_data = np.frombuffer(
+            raw_data[(i0+2 + n_dig) : (i0+2 + n_dig + n_byte)], 
+            dtype='>f', count=n_data)
+        v_data_2col = v_data.reshape((n_pts, 2)) # data is in "I0, Q0, I1, Q1, I2, Q2, .." format
+        v_complex = v_data_2col[:, 0] + 1j*v_data_2col[:, 1]
+        return v_complex
