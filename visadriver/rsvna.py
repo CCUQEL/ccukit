@@ -11,7 +11,7 @@ __all__ = [
 ]
 
 class RSVNA:
-    """The high level KeySight EXG control object by Tasi14. 
+    """The high level R&S VNA control object by Tasi14. 
     
     Example usage:
     >>> ## import and connect
@@ -144,7 +144,7 @@ class RSVNA:
         >>> vna.s_parm_enabled('S21', False)
         """
         sparm_channels_map = self.get_sparm_channels_map()
-        # create new measurement, is enable is true
+        # create new measurement, if enable is true
         if enabled:
             new_name = 'LabC_%s' % s_parm_str
             self.visa_write(f"CALC:PAR:SDEF '{new_name}','{s_parm_str}'")
@@ -156,7 +156,7 @@ class RSVNA:
                 'S41', 'S42', 'S43', 'S44'
             ].index(s_parm_str)
             self.visa_write(f"DISP:WIND:TRAC{iTrace}:FEED '{new_name}'")
-        # delete the measurment is enable is false, and it is currently enabled
+        # delete the measurment if enable is false and it is currently enabled
         if not enabled:
             if s_parm_str in sparm_channels_map:
                 for name in sparm_channels_map[s_parm_str]:
@@ -164,7 +164,7 @@ class RSVNA:
 
     #### getter like method
     def visa_query(self, command: str) -> str:
-        """write SCPI command to keysight EXG, return the response."""
+        """write SCPI command to R&S VNA, return the response."""
         return self.visa_resource.query(command)
     def get_freqs(self):
         """Get sweeped frequencies"""
