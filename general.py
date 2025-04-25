@@ -23,7 +23,8 @@ __all__ = [
     'get_path',
     'plot_trace',
     'set_plot_style',
-    'save_to_csv'
+    'save_to_csv',
+    'get_run_script_func'
 ]
 
 def get_path(ext: str, title = 'Select a file path', save_file = False):
