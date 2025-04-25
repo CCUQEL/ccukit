@@ -12,6 +12,12 @@ import ctypes
 from matplotlib import pyplot as plt
 import numpy as np
 import csv
+import os
+import sys
+from datetime import datetime
+from os.path import isdir, isfile, join
+
+
 
 __all__ = [
     'get_path',
@@ -203,3 +209,96 @@ def save_to_csv(filename, title_array, data_array):
         writer = csv.writer(file)
         writer.writerow(title_array)  # Write the header row
         writer.writerows(data_array)  # Write the data as two columns
+
+from Labber import ScriptTools
+def get_run_script_func(
+    template_path,
+    labber_install_path=r'C:\Program Files\Keysight\Labber',
+    ):
+    """Return a function that can run the script, based on template provided.
+    
+    Example usage:
+    >>> run_script = get_run_script_func(template_path=template_path)
+    >>> override = {
+    >>>     # VNA
+    >>>     'VNA - Start frequency': {'single':4e+9},
+    >>>     'VNA - Stop frequency': {'single':5e+9},
+    >>>     'VNA - # of points': {'single': 401},
+    >>>     # DC
+    >>>     'DC1 - Current': {
+    >>>         'start': 2.5e-3,
+    >>>         'stop': 7.5e-3,
+    >>>         'n_pts': 401,
+    >>>     },
+    >>>     'DC2 - Current': {'single': 4e-3}
+    >>> }
+    >>> run_script(save_name='save_name', override=override)
+    """
+    def get_datafolder_today(labber_data_folder: str = r'C:\Users\QEL\Labber\Data'):
+        """Get data folder for storing mearuement data of Labber, for today's date."""
+        # check for the root folder exist
+        if not isdir(labber_data_folder):
+            raise Exception(f'the labber data folder `{labber_data_folder}` does not exist.')
+        
+        # check for today's folder exist, create it if not
+        yy, mm, dd = datetime.today().strftime('%Y-%m-%d').split('-')
+        data_folder_today = join(labber_data_folder, f'{yy}\\{mm}\\Data_{mm}{dd}')
+        if not isdir(data_folder_today):
+            os.makedirs(data_folder_today)
+        return data_folder_today
+    
+    # check if Labber install directory exist
+    if not isdir(labber_install_path):
+        raise ImportError('Labber is not installed in default directory')
+
+    # create api and measurement client paths
+    api_path = join(labber_install_path, 'Script')
+    client_path = join(labber_install_path, 'Program', 'Measurement.exe')
+    sys.path.append(api_path)
+    ScriptTools.setExePath(client_path)
+    save_folder = get_datafolder_today()
+
+
+    def run_script(save_name: str, override: dict = {}, show_result=False, print_info=True):
+        """Run script based on template, override provided settings.
+
+        override has format `{channel_name:{item_type: value}}`.
+        The item type: single, start, stop, center, span, step, n_pts.
+        See example usage.
+
+        Example usage:
+        >>> run_script = get_run_script_func(template_path=template_path)
+        >>> override = {
+        >>>     # VNA
+        >>>     'VNA - Start frequency': {'single':4e+9},
+        >>>     'VNA - Stop frequency': {'single':5e+9},
+        >>>     'VNA - # of points': {'single': 401},
+        >>>     # DC
+        >>>     'DC1 - Current': {
+        >>>         'start': 2.5e-3,
+        >>>         'stop': 7.5e-3,
+        >>>         'n_pts': 401,
+        >>>     },
+        >>>     'DC2 - Current': {'single': 4e-3}
+        >>> }
+        >>> run_script(save_name='save_name', override=override)
+        """
+        save_path = join(save_folder, save_name + '.hdf5')
+        MeasObj = ScriptTools.MeasurementObject(template_path, save_path)
+        if override:
+            for master_channel, variable in override.items():
+                MeasObj.setMasterChannel(master_channel)
+                for name, val in variable.items():
+                    MeasObj.updateValue(master_channel, val, itemType=name)
+
+        # start measurement
+        if print_info:
+            print('>>>', datetime.now().strftime("%Y-%m-%d %H:%M"), end='') 
+            print(f', measurement `{save_name}` begins.')
+        result = MeasObj.performMeasurement()
+        if print_info:
+            print('>>>', datetime.now().strftime("%Y-%m-%d %H:%M"), end='') 
+            print(f', measurement `{save_name}` ends.')
+        if show_result:
+            print(result)
+    return run_script
