@@ -72,7 +72,6 @@ class RSVNA:
         self.id = id
         self.visa_resource = visa_resource
         self.sparm_channels_map: dict[str, list[str]] = {}
-        self.update_sparm_channels_map()
 
     def get_sparm_channels_map(self) -> dict:
         """Update VNA's currently measuring parameters and its channel names.
@@ -90,12 +89,12 @@ class RSVNA:
         for n in range(n_measurements):
             channel_name = items[2*n] # e.g. 'CH4TR1', 'CH4TR2'
             s_parm = items[2*n + 1]   # e.g. 'S11', 'S12'
-            if s_parm not in self.sparm_channels_map:
+            if s_parm not in sparm_channels_map:
                 # create list with current name
-                self.sparm_channels_map[s_parm] = [channel_name,]
+                sparm_channels_map[s_parm] = [channel_name,]
             else:
                 # add to existing list
-                self.sparm_channels_map[s_parm].append(channel_name)
+                sparm_channels_map[s_parm].append(channel_name)
         return sparm_channels_map
 
     #### setter like method
