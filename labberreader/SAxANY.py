@@ -74,6 +74,7 @@ class SAxANY:
             A dictionary contains information about measurment, see code for details.
         """
         info = {}
+        info['SA - trace']= 'SA - Signal'
         # SA: Get number of traces, points; start, stop frequency
         sa_traces = self.file.get_trace_by_name('SA - Signal')
         npts = sa_traces.shape[0]

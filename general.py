@@ -222,18 +222,18 @@ def get_run_script_func(
     >>> run_script = get_run_script_func(template_path=template_path)
     >>> override = {
     >>>     # VNA
-    >>>     'VNA - Start frequency': {'single':4e+9},
-    >>>     'VNA - Stop frequency': {'single':5e+9},
+    >>>     'VNA - Start frequency': {'single': 4e+9},
+    >>>     'VNA - Stop frequency': {'single': 5e+9},
     >>>     'VNA - # of points': {'single': 401},
     >>>     # DC
-    >>>     'DC1 - Current': {
+    >>>     'DC supply - 1 - Current': {
     >>>         'start': 2.5e-3,
     >>>         'stop': 7.5e-3,
-    >>>         'n_pts': 401,
+    >>>         'n_pts': 11,
     >>>     },
-    >>>     'DC2 - Current': {'single': 4e-3}
+    >>>     'DC supply - 2 - Current': {'single': 4e-3}
     >>> }
-    >>> run_script(save_name='save_name', override=override)
+    >>> save_path = run_script(save_name='save_name', override=override)
     """
     def get_datafolder_today(labber_data_folder: str = r'C:\Users\QEL\Labber\Data'):
         """Get data folder for storing mearuement data of Labber, for today's date."""
@@ -271,18 +271,18 @@ def get_run_script_func(
         >>> run_script = get_run_script_func(template_path=template_path)
         >>> override = {
         >>>     # VNA
-        >>>     'VNA - Start frequency': {'single':4e+9},
-        >>>     'VNA - Stop frequency': {'single':5e+9},
+        >>>     'VNA - Start frequency': {'single': 4e+9},
+        >>>     'VNA - Stop frequency': {'single': 5e+9},
         >>>     'VNA - # of points': {'single': 401},
         >>>     # DC
-        >>>     'DC1 - Current': {
+        >>>     'DC supply - 1 - Current': {
         >>>         'start': 2.5e-3,
         >>>         'stop': 7.5e-3,
-        >>>         'n_pts': 401,
+        >>>         'n_pts': 11,
         >>>     },
-        >>>     'DC2 - Current': {'single': 4e-3}
+        >>>     'DC supply - 2 - Current': {'single': 4e-3}
         >>> }
-        >>> run_script(save_name='save_name', override=override)
+        >>> save_path =run_script(save_name='save_name', override=override)
         """
         save_path = join(save_folder, save_name + '.hdf5')
         MeasObj = ScriptTools.MeasurementObject(template_path, save_path)
@@ -302,4 +302,6 @@ def get_run_script_func(
             print(f', measurement `{save_name}` ends.')
         if show_result:
             print(result)
+        return save_path
+    
     return run_script
