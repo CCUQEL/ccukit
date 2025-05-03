@@ -14,3 +14,4 @@ from .yokogawa import YOKOGAWA
 from .keysightexg import KeySightEXG
 from .rsrfsource import RSRFSource
 from .rsvna import RSVNA
+from .shfqc import SHFQC

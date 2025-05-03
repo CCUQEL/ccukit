@@ -106,7 +106,7 @@ def recognize_numerical_value(img):
 def screenshot_region(region, output_path='') -> Image:
     """Takes a screenshot of a specified region of the screen and saves it to a file.
 
-    region has formate (left, top, width, height)
+    region has format (left, top, width, height)
     """
     screenshot = pyautogui.screenshot(region=region)
     if output_path != '':
