@@ -21,6 +21,7 @@ from os.path import isdir, isfile, join
 
 __all__ = [
     'get_path',
+    'get_folderpath',
     'plot_trace',
     'set_plot_style',
     'save_to_csv',
@@ -55,6 +56,27 @@ def get_path(ext: str, title = 'Select a file path', save_file = False):
     filepath = dialog(filetypes = [(ext.upper() + ' Files', ext)],
                       title = title)
     return filepath
+
+def get_folderpath(title='Select a folder'):
+    """Pop up a dialog to browse and select a folder.
+
+    Example usage:
+    >>> folder = get_folderpath('Select a data folder')
+    
+    Args:
+        title (str): The title displayed on the dialog.
+
+    Returns:
+        str: The selected folder path. Empty string if canceled.
+    """
+    ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    root = Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+
+    folderpath = filedialog.askdirectory(title=title)
+    return folderpath
+
 
 def plot_trace(freq, signal):
     """Plot the trace of Imaginary vs Real, Magnitude vs Frequency, and Phase vs Frequency."""
@@ -214,6 +236,7 @@ def save_to_csv(filename, title_array, data_array):
 from Labber import ScriptTools
 def get_run_script_func(
     template_path,
+    data_save_folder=r'C:\Users\QEL\Labber\Data',
     labber_install_path=r'C:\Program Files\Keysight\Labber',
     ):
     """Return a function that can run the script, based on template provided.
@@ -235,15 +258,15 @@ def get_run_script_func(
     >>> }
     >>> save_path = run_script(save_name='save_name', override=override)
     """
-    def get_datafolder_today(labber_data_folder: str = r'C:\Users\QEL\Labber\Data'):
+    def get_datafolder_today(database_folder):
         """Get data folder for storing mearuement data of Labber, for today's date."""
         # check for the root folder exist
-        if not isdir(labber_data_folder):
-            raise Exception(f'the labber data folder `{labber_data_folder}` does not exist.')
+        if not isdir(database_folder):
+            raise Exception(f'the labber database folder `{database_folder}` does not exist.')
         
         # check for today's folder exist, create it if not
         yy, mm, dd = datetime.today().strftime('%Y-%m-%d').split('-')
-        data_folder_today = join(labber_data_folder, f'{yy}\\{mm}\\Data_{mm}{dd}')
+        data_folder_today = join(database_folder, f'{yy}\\{mm}\\Data_{mm}{dd}')
         if not isdir(data_folder_today):
             os.makedirs(data_folder_today)
         return data_folder_today
@@ -257,7 +280,7 @@ def get_run_script_func(
     client_path = join(labber_install_path, 'Program', 'Measurement.exe')
     sys.path.append(api_path)
     ScriptTools.setExePath(client_path)
-    save_folder = get_datafolder_today()
+    save_folder = get_datafolder_today(data_save_folder)
 
 
     def run_script(save_name: str, override: dict = {}, show_result=False, print_info=True):
@@ -282,9 +305,14 @@ def get_run_script_func(
         >>>     },
         >>>     'DC supply - 2 - Current': {'single': 4e-3}
         >>> }
-        >>> save_path =run_script(save_name='save_name', override=override)
+        >>> save_path = run_script(save_name='save_name', override=override)
         """
+        # delete existing file with the same name
         save_path = join(save_folder, save_name + '.hdf5')
+        if isfile(save_path):
+            os.remove(save_path)
+        
+        # create measurement object, override if provided
         MeasObj = ScriptTools.MeasurementObject(template_path, save_path)
         if override:
             for master_channel, variable in override.items():
