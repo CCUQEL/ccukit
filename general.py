@@ -233,7 +233,6 @@ def save_to_csv(filename, title_array, data_array):
         writer.writerow(title_array)  # Write the header row
         writer.writerows(data_array)  # Write the data as two columns
 
-from Labber import ScriptTools
 def get_run_script_func(
     template_path,
     data_save_folder=r'C:\Users\QEL\Labber\Data',
@@ -258,6 +257,7 @@ def get_run_script_func(
     >>> }
     >>> save_path = run_script(save_name='save_name', override=override)
     """
+    from Labber import ScriptTools
     def get_datafolder_today(database_folder):
         """Get data folder for storing mearuement data of Labber, for today's date."""
         # check for the root folder exist
